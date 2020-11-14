@@ -1,5 +1,6 @@
 import sqlite3
 
+import argh
 import arrow
 import polygon
 import business_calendar
@@ -70,9 +71,10 @@ def add_row(conn, ticker_data):
    conn.execute(INSERT_TICKER_ROW_SQL, values+values)
    # conn.commit() #TODO should this always be done?
 
-def download_14_days_of_market_data():
+@argh.aliases("download")
+def download_days_of_market_data(days=14):
     today = arrow.get()
-    two_weeks_ago = today.shift(days=-14)
+    two_weeks_ago = today.shift(days=-days)
 
     client = create_client()
 
@@ -90,14 +92,27 @@ def download_14_days_of_market_data():
     try:
         print("starting insert into db")
         conn = create_connection()
+        i = 0
         for day in all_market_data:
             for row in day:
                 add_row(conn, row)
+            print("done", i)
+            i += 1
         print("committing")
         conn.commit()
     except Exception as e:
         print("Got an error while inserting into db:", e)
 
-    print("returning all market data, raw")
-    return all_market_data
+    print("Done all")
+    # print("returning all market data, raw")
+    # return all_market_data
 
+@argh.aliases("parse")
+def parse_db_for_symbol(symbol):
+    conn = create_connection()
+
+parser = argh.ArghParser()
+parser.add_commands([download_days_of_market_data])
+
+if __name__ == '__main__':
+    parser.dispatch()
