@@ -1,0 +1,10 @@
+*.un~
+*.swp
+*.swp
+
+*.def
+
+*.dll
+*.exe
+*.db
+__pycache__
