@@ -5,6 +5,8 @@ import arrow
 import polygon
 import business_calendar
 
+import pandas as pd
+
 import auth
 
 
@@ -22,6 +24,7 @@ def create_connection(db_file="tickers.db"):
     conn = None
     try:
         conn = sqlite3.connect(db_file)
+        conn.row_factory = sqlite3.Row
         return conn
     except Exception as e:
         print("Exception", e)
@@ -30,7 +33,7 @@ def create_connection(db_file="tickers.db"):
 
 
 CREATE_TABLE_SQL = """
-create table tickers (
+create table %s (
   symbol text not null,
   open float, close float, high float, low float,
   volume float, vw float,
@@ -111,8 +114,21 @@ def download_days_of_market_data(days=14):
 def parse_db_for_symbol(symbol):
     conn = create_connection()
 
+    rows = conn.execute("""
+        SELECT * from tickers where symbol = ? order by `date`;
+    """, (symbol,))
+    df = pd.read_sql("Select * from tickers where symbol = 'MSFT' order by `date`", conn, index_col="date", parse_dates={"date": "ms", "updated_at":"s"})
+    import ipdb; ipdb.set_trace() #TODO
+
+def create_database(db_file="tickers.db", table_name="tickers"):
+    conn = create_connection(db_file)
+    conn.execute(CREATE_TABLE_SQL % table_name)
+    conn.commit()
+
+
+
 parser = argh.ArghParser()
-parser.add_commands([download_days_of_market_data])
+parser.add_commands([create_database, download_days_of_market_data, parse_db_for_symbol])
 
 if __name__ == '__main__':
     parser.dispatch()
