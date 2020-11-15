@@ -111,10 +111,6 @@ def download_days_of_market_data(days=14):
     # return all_market_data
 
 def is_consolidating(price_data, pct=2):
-    # weekly_df = df.rolling(window=5)["close"]
-    # consolidating = weekly_df.apply(lambda wk: wk.min() > (wk.max() * 0.98)).dropna()
-    # consolidating = consolidating[consolidating != 0]
-
     last_two_weeks = price_data.iloc[-10:]
 
     max_close = last_two_weeks["close"].max()
@@ -145,38 +141,10 @@ def parse_db_for_symbol(symbol):
     #     SELECT * from tickers where symbol = ? order by `date`;
     # """, (symbol,))
 
-    print(f"fetching all rows for symbol {symbol} from db into df")
-    df = pd.read_sql("Select * from tickers where symbol = '%s' order by `date`" % symbol, conn, index_col="date", parse_dates={"date": "ms", "updated_at":"s"})
-    print(f"done fetching all rows for symbol {symbol} from db into df")
-
-
-    # this would get a number I can filter on date column in the tickers db, so that I'd only get the last two weeks of rows. returns 90008 rows. maybe some tickers didnt trade or something, idk
-    ago = arrow.get().shift(days=-14).timestamp * 1000
-    ## conn.execute("select count(*) from tickers where `date` > %s" % ago)
-    df = pd.read_sql(("select * from tickers where `date` > %s" % ago), conn, index_col="date", parse_dates={"date": "ms", "updated_at":"s"})
-    # weekly_df = df.groupby("symbol").rolling(window=5)["close"]
-    ## consolidating = weekly_df.apply(lambda wk: wk.min() > (wk.max() * 0.98)).dropna()
-    ## consolidating = consolidating[consolidating != 0]
-
-    def cons(week):
-        # import ipdb; ipdb.set_trace() #TODO
-        print(week)
-        return week.max()
-        # close, vol = week.split(" ")
-        # if not vol: return None
-        return (close.min() > close.max() * 0.98, vol.sum() > 1_000_000)
-    qwe = df.groupby("symbol").rolling(window=5)
-    import ipdb; ipdb.set_trace() #TODO
-    qwe = df.groupby("symbol").rolling(window=5)[("close", "volume")].apply(cons).dropna()
-    weekly_df = df.groupby("symbol").rolling(window=5)["close", "volume"]
-    raw_consolidating = weekly_df.apply(lambda wk: (wk[0].min() > (wk[0].max() * 0.98)) & (wk[1].sum() > 1_000_000), raw=True).dropna()
-    consolidating = raw_consolidating.loc[(raw_consolidating["close"] != 0) & (raw_consolidating["volume"] != 0)]
-
-
-    # for symbol in symbols:
-    #     print(f"fetching all rows for symbol {symbol} from db into df")
-    #     df = pd.read_sql("Select * from tickers where symbol = '%s' order by `date`" % symbol[0], conn, index_col="date", parse_dates={"date": "ms", "updated_at":"s"})
-    #     print(f"done fetching all rows for symbol {symbol} from db into df")
+    for symbol in symbols:
+        print(f"fetching all rows for symbol {symbol} from db into df")
+        df = pd.read_sql("Select * from tickers where symbol = '%s' order by `date`" % symbol[0], conn, index_col="date", parse_dates={"date": "ms", "updated_at":"s"})
+        print(f"done fetching all rows for symbol {symbol} from db into df")
     import ipdb; ipdb.set_trace() #TODO
 
 def create_database(db_file="tickers.db", table_name="tickers"):
