@@ -133,7 +133,7 @@ def parse_db_for_symbol(symbol):
     old_row_fact = conn.row_factory
     conn.row_factory = None
     print("fetching all symbols")
-    symbols = conn.execute(DISTINCT_SYMBOLS_SQL).fetchall()
+    symbols = [s[0] for s in conn.execute(DISTINCT_SYMBOLS_SQL).fetchall()]
     print("done fetching all symbols")
     conn.row_factory = old_row_fact
 
@@ -141,10 +141,18 @@ def parse_db_for_symbol(symbol):
     #     SELECT * from tickers where symbol = ? order by `date`;
     # """, (symbol,))
 
-    for symbol in symbols:
+    # symbols = ["AAPL", "MSFT", "TSLA", "SRNE", "IWM"]
+
+    import time
+    start = time.time()
+    for symbol in symbols[:100]:
         print(f"fetching all rows for symbol {symbol} from db into df")
-        df = pd.read_sql("Select * from tickers where symbol = '%s' order by `date`" % symbol[0], conn, index_col="date", parse_dates={"date": "ms", "updated_at":"s"})
+        df = pd.read_sql("Select * from tickers where symbol = '%s' order by `date`" % symbol, conn, index_col="date", parse_dates={"date": "ms", "updated_at":"s"})
+        if is_consolidating(df):
+            print(symbol, "is consolidating at", df.iloc[-1])
         print(f"done fetching all rows for symbol {symbol} from db into df")
+    end = time.time()
+    print("took", end-start);
     import ipdb; ipdb.set_trace() #TODO
 
 def create_database(db_file="tickers.db", table_name="tickers"):
